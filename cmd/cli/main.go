@@ -7,11 +7,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
-	"runtime"
 
-	"github.com/lelopez-io/media-scrubber-service/internal/mediaprocessor"
+	"github.com/lelopez-io/media-privacy-service/internal/mediaprocessor"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -65,7 +65,7 @@ func main() {
 				BarStart:      "[",
 				BarEnd:        "]",
 			}))
-		
+
 		err := cleanOutputDir(*outputDir)
 		if err != nil {
 			log.Fatalf("Failed to clean output directory: %v", err)
@@ -182,13 +182,13 @@ func processFile(inputPath, outputPath string) error {
 		bar.Add(2) // Add 2 steps for skipped files
 		return nil
 	}
-	
+
 	// Reading file step
 	bar.Describe(fmt.Sprintf("Processing files..."))
 	bar.Add(1)
 
 	err := mediaprocessor.ProcessLocalMediaFile(inputPath, outputPath)
-	
+
 	// Saving output step
 	bar.Describe(fmt.Sprintf("Processing files..."))
 	bar.Add(1)

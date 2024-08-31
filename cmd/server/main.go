@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"sync/atomic"
 
-	"github.com/lelopez-io/media-scrubber-service/internal/mediaprocessor"
+	"github.com/lelopez-io/media-privacy-service/internal/mediaprocessor"
 )
 
 var (
-	port *int
+	port        *int
 	fileCounter uint64
 )
 
@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	// Create a temporary directory for output if it doesn't exist
-	tempOutputDir := filepath.Join(os.TempDir(), "media-scrubber-output")
+	tempOutputDir := filepath.Join(os.TempDir(), "media-privacy-output")
 	if _, err := os.Stat(tempOutputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(tempOutputDir, 0755)
 		if err != nil {
@@ -36,7 +36,8 @@ func main() {
 
 	http.HandleFunc("/scrub-metadata", handleScrubMetadata(tempOutputDir))
 
-	log.Printf("Starting server on port %d...\n", *port)
+	log.Printf("Server is running on http://localhost:%d\n", *port)
+	log.Printf("Use the /scrub-metadata endpoint to process files\n")
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
 }
 

@@ -30,6 +30,8 @@ var SupportedExtensions = map[string]func(string, string) error{
 	".JPEG": convertToJpg,
 	".mov":  convertMovToMp4,
 	".MOV":  convertMovToMp4,
+	".mp4":  convertMovToMp4,
+	".MP4":  convertMovToMp4,
 }
 
 // ProcessLocalMediaFile handles the processing of a single media file
@@ -104,17 +106,17 @@ func convertToJpg(input, output string) error {
 	return nil
 }
 
-// convertMovToMp4 converts a MOV file to MP4 using FFmpeg
+// convertMovToMp4 converts a MOV or MP4 file to MP4 using FFmpeg
 func convertMovToMp4(input, output string) error {
-	cmd := exec.Command("ffmpeg", 
-		"-i", input, 
-		"-map_metadata", "-1",  // Remove all metadata
-		"-c:v", "libx264", 
-		"-crf", "23", 
-		"-preset", "medium", 
-		"-c:a", "aac", 
-		"-b:a", "128k", 
-		"-movflags", "+faststart", 
+	cmd := exec.Command("ffmpeg",
+		"-i", input,
+		"-map_metadata", "-1", // Remove all metadata
+		"-c:v", "libx264",
+		"-crf", "23",
+		"-preset", "medium",
+		"-c:a", "aac",
+		"-b:a", "128k",
+		"-movflags", "+faststart",
 		"-y", output)
 
 	var stderr strings.Builder
@@ -143,13 +145,13 @@ func GenerateOrderedFilename(order int, ext string) string {
 	// Generate the random part
 	randomBytes := make([]byte, 4)
 	if _, err := rand.Read(randomBytes); err != nil {
-		panic(err)  // handle error appropriately in production code
+		panic(err) // handle error appropriately in production code
 	}
 	randomPart := hex.EncodeToString(randomBytes)
 
 	// Determine the output extension
 	outputExt := ".jpg"
-	if strings.ToLower(ext) == ".mov" {
+	if strings.ToLower(ext) == ".mov" || strings.ToLower(ext) == ".mp4" {
 		outputExt = ".mp4"
 	}
 
@@ -169,7 +171,7 @@ func ApplyOrientation(img image.Image, orientation int) image.Image {
 	case 5:
 		return transpose(img)
 	case 6:
-		return rotate90(img)  // Changed from rotate270 to rotate90
+		return rotate90(img) // Changed from rotate270 to rotate90
 	case 7:
 		return transverse(img)
 	case 8:

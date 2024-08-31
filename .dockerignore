@@ -8,6 +8,7 @@
 !cmd/
 !internal/
 !pkg/
+!templates/
 
 # If you have any specific configuration files, allow them too
 # !config.yaml
