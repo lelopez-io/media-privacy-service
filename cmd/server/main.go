@@ -3,14 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sync/atomic"
 
 	"github.com/lelopez-io/media-scrubber-service/internal/mediaprocessor"
 )
 
 var (
 	port *int
+	fileCounter uint64
 )
 
 func init() {
@@ -29,7 +34,55 @@ func main() {
 		}
 	}
 
+	http.HandleFunc("/scrub-metadata", handleScrubMetadata(tempOutputDir))
+
 	log.Printf("Starting server on port %d...\n", *port)
-	http.HandleFunc("/scrub-metadata", mediaprocessor.HandleScrubMetadata)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), nil))
+}
+
+func handleScrubMetadata(outputDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		// Generate a unique filename
+		order := int(atomic.AddUint64(&fileCounter, 1))
+		outputFilename := mediaprocessor.GenerateOrderedFilename(order, filepath.Ext(header.Filename))
+		outputPath := filepath.Join(outputDir, outputFilename)
+
+		// Create a temporary file to save the uploaded content
+		tempFile, err := os.CreateTemp("", "upload-*"+filepath.Ext(header.Filename))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer os.Remove(tempFile.Name())
+		defer tempFile.Close()
+
+		// Copy the uploaded file to the temporary file
+		_, err = io.Copy(tempFile, file)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Process the file
+		err = mediaprocessor.ProcessLocalMediaFile(tempFile.Name(), outputPath)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Serve the processed file
+		http.ServeFile(w, r, outputPath)
+	}
 }

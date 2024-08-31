@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 
 	"github.com/adrium/goheif"
 	"github.com/evanoberholster/imagemeta"
@@ -34,19 +33,13 @@ var SupportedExtensions = map[string]func(string, string) error{
 }
 
 // ProcessLocalMediaFile handles the processing of a single media file
-func ProcessLocalMediaFile(inputPath, outputDir string) error {
+func ProcessLocalMediaFile(inputPath, outputPath string) error {
 	ext := strings.ToLower(filepath.Ext(inputPath))
 
 	processFunc, supported := SupportedExtensions[ext]
 	if !supported {
 		return fmt.Errorf("unsupported file type: %s", ext)
 	}
-
-	// Generate an ordered filename
-	orderedFilename := generateOrderedFilename(ext)
-
-	// Create the output file path
-	outputPath := filepath.Join(outputDir, orderedFilename)
 
 	err := processFunc(inputPath, outputPath)
 	if err != nil {
@@ -70,10 +63,7 @@ func convertToJpg(input, output string) error {
 	metadata, err := imagemeta.Decode(fileInput)
 	if err == nil && metadata.Orientation > 0 && metadata.Orientation <= 8 {
 		orientation = int(metadata.Orientation)
-	} else {
-		fmt.Printf("Warning: Could not extract valid orientation from %s, using default (1)\n", input)
 	}
-	fmt.Printf("File: %s, Extracted orientation: %d\n", input, orientation)
 
 	// Reset file pointer to the beginning
 	_, err = fileInput.Seek(0, 0)
@@ -145,10 +135,10 @@ func IsSupported(filePath string) bool {
 	return supported
 }
 
-// generateOrderedFilename generates a filename with an ordered prefix
-func generateOrderedFilename(ext string) string {
+// GenerateOrderedFilename generates a filename with an ordered prefix
+func GenerateOrderedFilename(order int, ext string) string {
 	// Generate the ordered prefix
-	orderPrefix := fmt.Sprintf("%06d", atomic.AddUint64(&fileCounter, 1))
+	orderPrefix := fmt.Sprintf("%06d", order)
 
 	// Generate the random part
 	randomBytes := make([]byte, 4)
@@ -159,7 +149,7 @@ func generateOrderedFilename(ext string) string {
 
 	// Determine the output extension
 	outputExt := ".jpg"
-	if ext == ".mov" || ext == ".MOV" {
+	if strings.ToLower(ext) == ".mov" {
 		outputExt = ".mp4"
 	}
 
@@ -253,4 +243,24 @@ func rotate270(img image.Image) image.Image {
 	newImg := image.NewRGBA(image.Rect(0, 0, bounds.Dy(), bounds.Dx()))
 	draw.NearestNeighbor.Transform(newImg, f64.Aff3{0, 1, 0, -1, 0, float64(bounds.Dx())}, img, bounds, draw.Over, nil)
 	return newImg
+}
+
+// GetOrientation extracts the orientation from an image file
+func GetOrientation(input string) (int, error) {
+	fileInput, err := os.Open(input)
+	if err != nil {
+		return 1, fmt.Errorf("error opening input file: %v", err)
+	}
+	defer fileInput.Close()
+
+	metadata, err := imagemeta.Decode(fileInput)
+	if err != nil {
+		return 1, err
+	}
+
+	if metadata.Orientation > 0 && metadata.Orientation <= 8 {
+		return int(metadata.Orientation), nil
+	}
+
+	return 1, fmt.Errorf("invalid orientation value")
 }
