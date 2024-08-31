@@ -31,8 +31,8 @@ const (
 )
 
 func init() {
-	inputDir = flag.String("input", "", "Input directory or file")
-	outputDir = flag.String("output", "", "Output directory")
+	inputDir = flag.String("input", filepath.Join("workdir", "cli", "input"), "Input directory or file")
+	outputDir = flag.String("output", filepath.Join("workdir", "cli", "output"), "Output directory")
 	clean = flag.Bool("clean", false, "Clean the output directory before processing")
 	imageOnly = flag.Bool("image", false, "Process only image files")
 	maxCPU = flag.Bool("max", false, "Use maximum CPU cores for processing")
@@ -41,12 +41,15 @@ func init() {
 func main() {
 	flag.Parse()
 
-	// Set default directories if not provided
-	if *inputDir == "" {
-		*inputDir = "input"
+	// Create default directories if they don't exist
+	err := os.MkdirAll(*inputDir, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Failed to create input directory: %v", err)
 	}
-	if *outputDir == "" {
-		*outputDir = "output"
+
+	err = os.MkdirAll(*outputDir, os.ModePerm)
+	if err != nil {
+		log.Fatalf("Failed to create output directory: %v", err)
 	}
 
 	// Clean the output directory if the --clean flag is set
@@ -69,14 +72,6 @@ func main() {
 		}
 		cleanBar.Finish()
 		fmt.Println("Output directory cleaned.")
-	}
-
-	// Check if output directory exists, create if it doesn't
-	if _, err := os.Stat(*outputDir); os.IsNotExist(err) {
-		err = os.MkdirAll(*outputDir, 0755)
-		if err != nil {
-			log.Fatalf("Failed to create output directory: %v", err)
-		}
 	}
 
 	// Check if input is a file or directory

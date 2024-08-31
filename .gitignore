@@ -18,8 +18,8 @@
 *.ics
 
 # File directories
-/output/
-/input/
-output/
+workdir/
 *.jpg
 *.mp4
+*.heic
+*.mov
