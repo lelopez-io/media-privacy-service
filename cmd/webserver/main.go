@@ -1,11 +1,13 @@
 package main
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"mime/multipart"
@@ -53,9 +55,79 @@ func main() {
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/download/", handleDownload)
+	http.HandleFunc("/download-all", handleDownloadAll)
 
 	fmt.Println("Server is running on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
+}
+
+func handleDownloadAll(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	filenames := r.Form["filenames"]
+	if len(filenames) == 0 {
+		http.Error(w, "No files specified", http.StatusBadRequest)
+		return
+	}
+
+	// Create a temporary zip file
+	tmpfile, err := ioutil.TempFile("", "download-all-*.zip")
+	if err != nil {
+		http.Error(w, "Failed to create temporary file", http.StatusInternalServerError)
+		return
+	}
+	defer os.Remove(tmpfile.Name())
+
+	// Create a new zip archive
+	zipWriter := zip.NewWriter(tmpfile)
+
+	// Add specified files to the zip
+	for _, filename := range filenames {
+		filePath := filepath.Join("workdir", "web", filename)
+		
+		// Check if file exists
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			continue // Skip if file doesn't exist
+		}
+
+		zipFile, err := zipWriter.Create(filepath.Base(filename))
+		if err != nil {
+			http.Error(w, "Failed to create zip entry", http.StatusInternalServerError)
+			return
+		}
+
+		fsFile, err := os.Open(filePath)
+		if err != nil {
+			http.Error(w, "Failed to open file", http.StatusInternalServerError)
+			return
+		}
+		defer fsFile.Close()
+
+		_, err = io.Copy(zipFile, fsFile)
+		if err != nil {
+			http.Error(w, "Failed to copy file to zip", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	zipWriter.Close()
+	tmpfile.Close()
+
+	// Set headers for file download
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=selected_files.zip")
+
+	// Serve the zip file
+	http.ServeFile(w, r, tmpfile.Name())
 }
 
 func cleanWorkDir() error {
@@ -220,6 +292,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
             if err == nil && len(outputFiles) > 0 {
                 // File already processed
                 processedFiles[i] = ProcessedFile{Index: i, Filename: filepath.Join(session.ID, hashString, "output", outputFiles[0].Name())}
+                session.FileCounter-- // Decrement the file counter if the file is not processed
                 return
             }
 
@@ -227,6 +300,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
             err = ioutil.WriteFile(inputPath, fileContent, 0644)
             if err != nil {
                 processedFiles[i] = ProcessedFile{Index: i, Error: fmt.Sprintf("Error writing input file for %s: %v", fileHeader.Filename, err)}
+                session.FileCounter-- // Decrement the file counter if the file is not processed
                 return
             }
 
@@ -236,6 +310,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
             err = mediaprocessor.ProcessLocalMediaFile(inputPath, outputPath)
             if err != nil {
                 processedFiles[i] = ProcessedFile{Index: i, Error: fmt.Sprintf("Error processing file %s: %v", fileHeader.Filename, err)}
+                session.FileCounter-- // Decrement the file counter if the file is not processed
                 return
             }
 

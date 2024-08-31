@@ -1,104 +1,237 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Processor</title>
-    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .animate-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl">
-        <div class="p-8">
-            <h1 class="text-2xl font-bold mb-4">File Processor</h1>
-            <div id="drop-zone" class="border-dashed border-2 border-gray-300 rounded-lg p-8 text-center">
-                <p>Drag and drop files here or click to select</p>
-                <input type="file" id="file-input" multiple class="hidden" />
-            </div>
-            <div id="file-list" class="mt-4">
-                <ul id="processed-files"></ul>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>File Processor</title>
+        <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+            .animate-pulse {
+                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            .animate-spin {
+                animation: spin 1s linear infinite;
+            }
+        </style>
+    </head>
+    <body class="bg-gray-100 p-8">
+        <div
+            class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl"
+        >
+            <div class="p-8">
+                <h1 class="text-2xl font-bold mb-4">File Processor</h1>
+                <div
+                    id="drop-zone"
+                    class="border-dashed border-2 border-gray-300 rounded-lg p-8 text-center"
+                >
+                    <p>Drag and drop files here or click to select</p>
+                    <input
+                        type="file"
+                        id="file-input"
+                        multiple
+                        class="hidden"
+                    />
+                </div>
+                <div id="file-list" class="mt-4">
+                    <ul id="processed-files"></ul>
+                </div>
+                <div
+                    id="download-all-container"
+                    class="mt-4 text-right"
+                    style="display: none"
+                >
+                    <hr class="my-4 border-gray-300" />
+                    <form
+                        id="download-form"
+                        action="/download-all"
+                        method="post"
+                    >
+                        <!-- The button will be added dynamically in JavaScript -->
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    <script>
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const processedFiles = document.getElementById('processed-files');
+        <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+        <script>
+            const dropZone = document.getElementById('drop-zone')
+            const fileInput = document.getElementById('file-input')
+            const processedFiles = document.getElementById('processed-files')
+            const downloadAllContainer = document.getElementById(
+                'download-all-container'
+            )
 
-        // Initialize Feather icons
-        feather.replace();
+            // Initialize Feather icons
+            feather.replace()
 
-        dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('click', () => fileInput.click())
 
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('border-blue-500');
-        });
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault()
+                dropZone.classList.add('border-blue-500')
+            })
 
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('border-blue-500');
-        });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-blue-500')
+            })
 
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-blue-500');
-            handleFiles(e.dataTransfer.files);
-        });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault()
+                dropZone.classList.remove('border-blue-500')
+                handleFiles(e.dataTransfer.files)
+            })
 
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files)
+            })
 
-        function handleFiles(files) {
-            const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('file-input', files[i]);
-                addLoadingItem(files[i].name);
+            function handleFiles(files) {
+                const formData = new FormData()
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('file-input', files[i])
+                    addLoadingItem(files[i].name)
+                }
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then((response) => response.text())
+                    .then((html) => {
+                        processedFiles.innerHTML = html
+                        feather.replace()
+                        updateDownloadForm()
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error)
+                    })
             }
 
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(html => {
-                processedFiles.innerHTML = html;
-                feather.replace();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        }
+            function updateDownloadForm() {
+                const downloadForm = document.getElementById('download-form')
+                const downloadAllContainer = document.getElementById(
+                    'download-all-container'
+                )
 
-        function addLoadingItem(filename) {
-            const li = document.createElement('li');
-            li.className = 'flex justify-between items-center py-2';
-            li.innerHTML = `
+                const files = processedFiles.querySelectorAll('a[download]')
+                files.forEach((file) => {
+                    const filename = file
+                        .getAttribute('href')
+                        .replace('/download/', '')
+                    if (
+                        !downloadForm.querySelector(
+                            `input[value="${filename}"]`
+                        )
+                    ) {
+                        const input = document.createElement('input')
+                        input.type = 'hidden'
+                        input.name = 'filenames'
+                        input.value = filename
+                        downloadForm.appendChild(input)
+                    }
+                })
+
+                if (files.length > 0) {
+                    downloadAllContainer.style.display = 'block'
+                } else {
+                    downloadAllContainer.style.display = 'none'
+                }
+
+                // Ensure the button is in the form
+                if (!downloadForm.querySelector('#download-all-button')) {
+                    const button = document.createElement('button')
+                    button.id = 'download-all-button'
+                    button.type = 'submit'
+                    button.className =
+                        'bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-block'
+                    button.textContent = 'Download All'
+                    downloadForm.appendChild(button)
+                }
+
+                // Log for debugging
+                console.log('Number of processed files:', files.length)
+                console.log(
+                    'Download all container visibility:',
+                    downloadAllContainer.style.display
+                )
+                console.log('Download form contents:', downloadForm.innerHTML)
+            }
+
+            // Call updateDownloadForm after processing files
+            function handleFiles(files) {
+                const formData = new FormData();
+                const loadingItems = [];
+
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('file-input', files[i]);
+                    const loadingItem = addLoadingItem(files[i].name);
+                    loadingItems.push(loadingItem);
+                }
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then((response) => response.text())
+                    .then((html) => {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        const newItems = tempDiv.children;
+
+                        while (newItems.length > 0) {
+                            const newItem = newItems[0];
+                            const filename = newItem.querySelector('a[download]').getAttribute('href').replace('/download/', '');
+
+                            // Check if a processed entry already exists for the current file
+                            const existingItem = processedFiles.querySelector(`a[href="/download/${filename}"]`);
+                            if (!existingItem) {
+                                processedFiles.appendChild(newItem);
+                            }
+
+                            // Remove the corresponding loading item
+                            const loadingItem = loadingItems.shift();
+                            loadingItem.remove();
+                        }
+
+                        feather.replace();
+                        updateDownloadForm();
+                        console.log(
+                            'handleFiles completed, updateDownloadForm called'
+                        );
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            function addLoadingItem(filename) {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center py-2';
+                li.innerHTML = `
                 <span class="animate-pulse">Processing: ${filename}</span>
                 <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
             `;
-            processedFiles.appendChild(li);
-        }
-    </script>
-</body>
+                processedFiles.appendChild(li);
+                return li;
+            }
+        </script>
+    </body>
 </html>
