@@ -1,0 +1,12 @@
+#!/bin/sh
+# Auto-push after commit to keep repo synced across computers
+
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+echo "Pushing to origin/$current_branch..."
+if git push origin "$current_branch" 2>&1; then
+    echo "✓ Pushed successfully"
+else
+    echo "✗ Push failed - you may need to pull first"
+    exit 0  # Don't fail the commit if push fails
+fi
