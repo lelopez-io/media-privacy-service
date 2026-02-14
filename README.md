@@ -35,6 +35,14 @@ mise run setup
 
 ### Usage
 
+**Web Interface:**
+
+```bash
+go run cmd/webserver/main.go
+```
+
+Open `http://localhost:8080` - drag and drop files, monitor progress, download results.
+
 **CLI** - process files in `input/` directory:
 
 ```bash
@@ -46,14 +54,6 @@ Options:
 - `--output=path` - custom output directory
 - `--image` - process only images
 - `--clean` - clean output directory first
-
-**Web Interface:**
-
-```bash
-go run cmd/webserver/main.go
-```
-
-Open `http://localhost:8080` - drag and drop files, monitor progress, download results.
 
 **Docker:**
 
