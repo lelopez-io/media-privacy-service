@@ -21,20 +21,15 @@ import (
 // fileCounter is used to generate ordered prefixes for filenames
 var fileCounter uint64
 
-// SupportedExtensions is a map of supported file extensions and their corresponding processing functions
+// SupportedExtensions maps file extensions to their processing functions.
+// Extensions are lowercase - callers should normalize with strings.ToLower().
 var SupportedExtensions = map[string]func(string, string) error{
 	".heic": convertToJpg,
-	".HEIC": convertToJpg,
 	".jpg":  convertToJpg,
 	".jpeg": convertToJpg,
-	".JPG":  convertToJpg,
-	".JPEG": convertToJpg,
 	".png":  convertToJpg,
-	".PNG":  convertToJpg,
 	".mov":  convertMovToMp4,
-	".MOV":  convertMovToMp4,
 	".mp4":  convertMovToMp4,
-	".MP4":  convertMovToMp4,
 }
 
 // ProcessLocalMediaFile handles the processing of a single media file
