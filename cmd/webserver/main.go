@@ -57,7 +57,8 @@ func main() {
 	http.HandleFunc("/download/", handleDownload)
 	http.HandleFunc("/download-all", handleDownloadAll)
 
-	fmt.Println("Server is running on http://localhost:8080")
+	fmt.Println("Server is running on:")
+	fmt.Println("http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
 
