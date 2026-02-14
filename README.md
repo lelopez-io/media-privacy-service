@@ -1,6 +1,6 @@
 # Media Privacy Service
 
-Scrubs metadata from image and video files before sharing them online. Supports HEIC, JPG/JPEG images and MOV/MP4 videos.
+Scrubs metadata from image and video files before sharing them online. Supports HEIC, JPG/JPEG, PNG images and MOV/MP4 videos.
 
 This project uses [mise](https://mise.jdx.dev/) to manage Go versions automatically.
 

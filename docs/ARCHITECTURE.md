@@ -24,7 +24,7 @@ media-privacy-service/
 
 ## Features
 
-- Processes HEIC, JPG/JPEG image files, and MOV/MP4 video files
+- Processes HEIC, JPG/JPEG, PNG image files, and MOV/MP4 video files
 - Removes all metadata from images, including EXIF data
 - Converts MOV files to MP4 format while removing metadata
 - Maintains image orientation during processing
