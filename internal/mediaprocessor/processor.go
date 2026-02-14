@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +29,8 @@ var SupportedExtensions = map[string]func(string, string) error{
 	".jpeg": convertToJpg,
 	".JPG":  convertToJpg,
 	".JPEG": convertToJpg,
+	".png":  convertToJpg,
+	".PNG":  convertToJpg,
 	".mov":  convertMovToMp4,
 	".MOV":  convertMovToMp4,
 	".mp4":  convertMovToMp4,
@@ -77,9 +80,12 @@ func convertToJpg(input, output string) error {
 
 	// Determine file type and decode accordingly
 	ext := strings.ToLower(filepath.Ext(input))
-	if ext == ".heic" {
+	switch ext {
+	case ".heic":
 		img, err = goheif.Decode(fileInput)
-	} else {
+	case ".png":
+		img, err = png.Decode(fileInput)
+	default:
 		img, _, err = image.Decode(fileInput)
 	}
 
